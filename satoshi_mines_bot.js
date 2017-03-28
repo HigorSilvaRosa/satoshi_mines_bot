@@ -20,8 +20,14 @@ function get_current_balance(){
     return parseInt($(".balance .num").text().replace(",", ""));
 }
 
+function get_time_difference(){
+    var current_time = new Date();
+    return (current_time - initial_time) / 1000
+}
+
 var games_counter = 0;
 var initial_balance = get_current_balance();
+var initial_time = new Date()
 
 start_game();
 function start_game() {
@@ -30,11 +36,12 @@ function start_game() {
 
     var current_balance = get_current_balance();
     var balance_difference = current_balance - initial_balance;
-    var percentage = current_balance/initial_balance*100
+    var percentage = (current_balance/initial_balance*100).toFixed(2)
 
     console.log("GAME #"+games_counter);
     console.log("Balance: "+current_balance);
-    console.log("Difference: "+balance_difference+" - "+percentage);
+    console.log("Difference: "+balance_difference+" ("+percentage+"%)");
+    console.log("Minutes: "+(get_time_difference()/60).toFixed(2));
     console.log("--- --- --- --- ---")
 
     var risky_bet = Math.floor((Math.random() * 100) + 1);
