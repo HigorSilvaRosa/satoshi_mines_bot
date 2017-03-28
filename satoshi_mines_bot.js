@@ -1,121 +1,68 @@
-var bet = 250;
+// Settings
+var userBet = 0;
+// Bot
+var betRound = 50;
+var forceBet = false;
+var lastBet = 0;
+var interval = 2500;
+var lastBalance = 0;
+var gamesCounter = 0;
+var initialBalance = parseInt($(".balance .num").text().replace(",", ""));
+var initialTime = new Date();
 
-/* in case the bot will click a bomb, bet will be adjusted on the next round to compensate the loss.
-the bot will set the bet again to the original value on the next next round.*/
-var bigBet = bet / .039;
-bigBet = Math.ceil(bigBet);
-
-var risky_bet_chance = 0;
-
-/* click sequence interval in milliseconds. equivalent to 2 seconds.
-You can change it to longer than 2 seconds but please don't change it to a lower value because it can messed up the timings if you have a slow internet. If you have a very slow internet connection, I recommend setting it up to 3 seconds or higher. */
-var interval = 1500;
-
-var restart, tile1, timeout1, timeout2, timeout3;
-
-// force the difficulty to 1 mine at the start of the game.
-$('.quarter').first().find('button').click();
-
-function get_current_balance(){
-    return parseInt($(".balance .num").text().replace(",", ""));
-}
-
-function get_time_difference(){
-    var current_time = new Date();
-    return (current_time - initial_time) / 1000
-}
-
-var games_counter = 0;
-var initial_balance = get_current_balance();
-var initial_time = new Date()
-
-start_game();
-function start_game() {
-
-    games_counter += 1;
-
-    var current_balance = get_current_balance();
-    var balance_difference = current_balance - initial_balance;
-    var percentage = (current_balance/initial_balance*100).toFixed(2)
-
-    console.log("GAME #"+games_counter);
-    console.log("Balance: "+current_balance);
-    console.log("Difference: "+balance_difference+" ("+percentage+"%)");
-    console.log("Minutes: "+(get_time_difference()/60).toFixed(2));
-    console.log("--- --- --- --- ---")
-
-    var risky_bet = Math.floor((Math.random() * 100) + 1);
-
-    if (restart == 1) {
-        if (risky_bet < risky_bet_chance) {
-            $('#bet').val(1.5 * bigBet);
-        } else {
-            $('#bet').val(bigBet);
-        }
-        restart = 0;
-    } else {
-        if (risky_bet < risky_bet_chance) {
-            $('#bet').val(1.5 * bigBet);
-        } else {
-            $('#bet').val(bet);
-        }
+function start(){
+    var currentBalance = parseInt($(".balance .num").text().replace(",", ""));
+    lastBalance = currentBalance;
+    var bet = userBet;
+    if (bet == 0){
+        bet = Math.floor(Math.floor(currentBalance * 0.005) / betRound) * betRound;
     }
-    $('#start_game').click();
-    timeout1 = setTimeout(click_tile1, interval)
+    if (forceBet){
+        bet = bet + (25 * lastBet);
+    }
+    lastBet = bet;
+    gamesCounter += 1;
+    var balanceDifference = currentBalance - initialBalance;
+    var balancePercentage = (currentBalance/initialBalance*100).toFixed(2)
+    var currentTime = new Date();
+    var timeDifference = (currentTime - initialTime) / 1000;
+    console.log("GAME #"+gamesCounter);
+    console.log("Balance: "+currentBalance);
+    console.log("Difference: "+balanceDifference+" ("+balancePercentage+"%)");
+    console.log("Minutes: "+(timeDifference/60).toFixed(2));
+    console.log("Bet: "+bet);
 
-} // end of function start_game()
+    //Set bet settings
+    $("#bet").val(bet);
+    var mineButton = $(".mine_options button").first();
+    mineButton.click();
+    $("#start_game").click();
+    setTimeout(play, interval);
+}
 
-function click_tile1() {
+function play(){
+    var randomChoice = Math.floor(Math.random() * 25) + 1;
+    var game = $(".game").first();
+    var tile = game.find("li[data-tile="+randomChoice+"]").first();
+    tile.click();
+    setTimeout(cashout, interval);
+}
 
-    var tile1 = Math.floor((Math.random() * 25) + 1);
-    //search_last_bomb();
-    $('.game_left').first().find('li[data-tile=' + tile1 + ']').click();
-    $('.game_left [data-tile="' + tile1 + '"]').click();
-    setTimeout(function () {
-        if ($('.game_left').first().find('li[data-tile=' + tile1 + ']').hasClass('bomb')) {
-            var bal = $('.balance .num').html();
-            bal = $.trim(bal);
-            bal = bal.replace(',', '');
-            bal = parseInt(bal);
-            //bal = bigBet // practice mode
-
-            if (bal < bigBet) {
-                stopgame();
-            } else {
-                restart = 1;
-                start_game();
-            }
-
-        } else {
-            timeout2 = setTimeout(cashout, interval);
+function cashout(){
+    var game = $(".game").first();
+    var cashoutButton = game.find(".cashout").first();
+    cashoutButton.click();
+    setTimeout(function(){
+        var currentBalance = parseInt($(".balance .num").text().replace(",", ""));
+        if (lastBalance > currentBalance){
+            console.log("LOSE!");
+            forceBet = true;
+        }else{
+            console.log("WIN!");
+            forceBet = false;
         }
+        console.log("--- --- ---- --- ----");
+        start();
     }, interval);
-
-} // end of function click_tile()
-
-function cashout() {
-    $('.game_right').first().find('.cashout').click();
-    timeout3 = setTimeout(start_game, interval);
-} // end of cashout
-
-function stopgame() {
-    clearTimeout(timeout1);
-    clearTimeout(timeout2);
-    clearTimeout(timeout3);
-} // end of stopgame()
-
-function search_last_bomb() {
-    var has_chosen = 0;
-    if ($('.game_left').eq(1) != null && $('.game_left').eq(1).length > 0) {
-        $('.game_left').eq(1).find('.board').find('li').each(function (i, elem) {
-            if ($(elem).hasClass('reveal')) {
-                has_chosen = 1;
-                tile1 = $(elem).data('tile');
-                return false;
-            }
-        });
-    }
-    if (has_chosen == 0) {
-        tile1 = Math.floor((Math.random() * 25) + 1);
-    }
-} // end of searchLastBombTile()
+}
+start();
